@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Batcaverna — Tactical HUD</title>
+<style>
+  :root {
+    --bg: #191919;
+    --panel: #202020;
+    --border: #2f2f2f;
+    --text-main: #e5e5e5;
+    --text-muted: #8a8a8a;
+    --accent: #eab308; /* Ambra tattico */
+    --accent-dim: rgba(234, 179, 8, 0.15);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-main);
+    padding: 12px;
+    overflow-x: hidden;
+  }
+
+  .hud-container {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: 1.2fr 1.8fr;
+    gap: 20px;
+  }
+
+  /* Left Column: Status & Countdowns */
+  .hud-left {
+    border-right: 1px solid var(--border);
+    padding-right: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .sys-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .sys-title {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pulse-dot {
+    width: 7px;
+    height: 7px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .clock {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .countdown-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .cd-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+
+  .cd-days {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .cd-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Right Column: Interactive Progress Tracks */
+  .hud-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .track-header {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .track-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+  }
+
+  .track-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+
+  .track-name {
+    color: var(--text-main);
+  }
+
+  .track-pct {
+    color: var(--accent);
+  }
+
+  .bar-bg {
+    width: 100%;
+    height: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.25s ease;
+  }
+
+  @media (max-width: 700px) {
+    .hud-container {
+      grid-template-columns: 1fr;
+    }
+    .hud-left {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding-right: 0;
+      padding-bottom: 14px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="hud-container">
+  <!-- Pannello Sinistro: Stato & Countdown -->
+  <div class="hud-left">
+    <div class="sys-header">
+      <div class="sys-title"><span class="pulse-dot"></span> BATCOMPUTER // SYS.ACTIVE</div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+    <div class="countdown-grid">
+      <div class="cd-box">
+        <div class="cd-days" id="cd-neuro">--d</div>
+        <div class="cd-label">Esame Neuro</div>
+      </div>
+      <div class="cd-box">
+        <div class="cd-days" id="cd-delf">--d</div>
+        <div class="cd-label">DELF A2</div>
+      </div>
+      <div class="cd-box">
+        <div class="cd-days" id="cd-target">--d</div>
+        <div class="cd-label">Target Feb 27</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pannello Destro: Avanzamento Obiettivi (Clicca sulle barre per aggiornare +10%) -->
+  <div class="hud-right">
+    <div class="track-header">
+      <span>ACTIVE PROTOCOLS (NOV 26 – FEB 27)</span>
+      <span>[CLICK BAR +10%]</span>
+    </div>
+
+    <div class="track-item" onclick="stepProgress('coursera')">
+      <div class="track-meta">
+        <span class="track-name">01. COURSERA TRIAD (PYTHON / R / COMP.NEURO)</span>
+        <span class="track-pct" id="pct-coursera">10%</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-coursera" style="width: 10%"></div></div>
+    </div>
+
+    <div class="track-item" onclick="stepProgress('simnibs')">
+      <div class="track-meta">
+        <span class="track-name">02. MEDTECH: SIMNIBS tDCS (DLPFC vs OFC)</span>
+        <span class="track-pct" id="pct-simnibs">10%</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-simnibs" style="width: 10%"></div></div>
+    </div>
+
+    <div class="track-item" onclick="stepProgress('langs')">
+      <div class="track-meta">
+        <span class="track-name">03. LANGUAGES (ENGLISH B2 + FRENCH A2)</span>
+        <span class="track-pct" id="pct-langs">20%</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-langs" style="width: 20%"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Orologio Live
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('it-IT', { hour12: false });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Calcolo Countdown
+  function daysUntil(targetDateStr) {
+    const now = new Date();
+    const target = new Date(targetDateStr);
+    const diff = target - now;
+    const days = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    return days + 'd';
+  }
+
+  document.getElementById('cd-neuro').textContent = daysUntil('2026-12-15');
+  document.getElementById('cd-delf').textContent = daysUntil('2027-01-25');
+  document.getElementById('cd-target').textContent = daysUntil('2027-02-28');
+
+  // Barre di avanzamento interattive con salvataggio locale
+  const defaults = { coursera: 10, simnibs: 10, langs: 20 };
+
+  function loadProgress() {
+    Object.keys(defaults).forEach(key => {
+      const saved = localStorage.getItem('batcaverna_' + key);
+      const val = saved !== null ? parseInt(saved, 10) : defaults[key];
+      renderBar(key, val);
+    });
+  }
+
+  function stepProgress(key) {
+    const current = parseInt(localStorage.getItem('batcaverna_' + key) || defaults[key], 10);
+    const next = current >= 100 ? 0 : current + 10;
+    localStorage.setItem('batcaverna_' + key, next);
+    renderBar(key, next);
+  }
+
+  function renderBar(key, val) {
+    document.getElementById('bar-' + key).style.width = val + '%';
+    document.getElementById('pct-' + key).textContent = val + '%';
+  }
+
+  loadProgress();
+</script>
+</body>
+</html>
