@@ -79,6 +79,7 @@
     padding: 5px 8px;
     font-size: 11px;
     cursor: pointer;
+    transition: all 0.15s ease;
   }
   button:hover, select:hover { border-color: var(--accent); }
   button.primary {
@@ -88,6 +89,14 @@
     border-color: var(--accent);
   }
   button.primary:hover { background: var(--accent-hover); }
+  button.save-btn {
+    border-color: rgba(34, 197, 94, 0.45);
+    color: var(--green);
+  }
+  button.save-btn:hover {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: var(--green);
+  }
   .select-row {
     display: flex;
     gap: 6px;
@@ -152,7 +161,8 @@
     <div class="timer-display" id="timer-display">45:00</div>
     <div class="controls">
       <button class="primary" id="btn-start" onclick="toggleTimer()">START</button>
-      <button onclick="resetTimer()">RESET</button>
+      <button class="save-btn" onclick="savePartialSession()" title="Salva i minuti già trascorsi nello storico e azzera">SAVE</button>
+      <button onclick="resetTimer()" title="Azzera senza salvare">RESET</button>
       <button onclick="switchPreset()" id="btn-preset">45/10</button>
     </div>
   </div>
@@ -164,7 +174,7 @@
       <option value="SimNIBS MedTech">🧠 SimNIBS MedTech</option>
       <option value="Lingue (EN B2 / FR A2)">🌍 Lingue (EN B2 / FR A2)</option>
     </select>
-    <button onclick="logManualSession()">+ Log</button>
+    <button onclick="logManualSession()" title="Aggiungi sessione fatta offline">+ Log</button>
   </div>
 
   <div class="stats-grid">
@@ -241,6 +251,26 @@
         }
       }, 1000);
     }
+  }
+
+  // Salva i minuti effettivamente trascorsi quando interrompi prima della fine
+  function savePartialSession() {
+    if (isBreak) {
+      resetTimer();
+      return;
+    }
+    const p = presets[presetIndex];
+    const totalSeconds = p.focus * 60;
+    const elapsedSeconds = totalSeconds - secondsLeft;
+    const elapsedMinutes = Math.round(elapsedSeconds / 60);
+
+    if (elapsedMinutes < 1) {
+      alert('Meno di 1 minuto trascorso: sessione troppo breve per essere salvata.');
+      return;
+    }
+
+    saveSession(elapsedMinutes, document.getElementById('study-category').value);
+    resetTimer();
   }
 
   function resetTimer() {
